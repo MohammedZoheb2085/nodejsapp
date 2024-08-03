@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    environment {
+        NODEJS_HOME = tool name: 'NodeJS', type: 'NodeJSInstallation'
+        PATH = "${env.NODEJS_HOME}/bin:${env.PATH}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: 'https://github.com/your-username/your-repo.git'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Code Quality') {
+            steps {
+                sh 'npm install eslint'
+                sh 'npx eslint .'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+        stage('Upload to Artifactory') {
+            steps {
+                script {
+                    // Example for Artifactory
+                    def server = Artifactory.server('your-artifactory-server')
+                    def uploadSpec = """{
+                        "files": [{
+                            "pattern": "*.tar.gz",
+                            "target": "generic-local/nodejs-app/"
+                        }]
+                    }"""
+                    server.upload(uploadSpec)
+                }
+            }
+        }
+        stage('Deploy to Cloud') {
+            steps {
+                script {
+                    // Example deployment step
+                    sh 'scp *.tar.gz user@your-cloud-server:/path/to/deployment'
+                    sh 'ssh user@your-cloud-server "cd /path/to/deployment && tar -xzf *.tar.gz && npm install && pm2 restart all"'
+                }
+            }
+        }
+    }
+}
